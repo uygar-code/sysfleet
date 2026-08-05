@@ -1,0 +1,50 @@
+services:
+  hub:
+    build:
+      context: .
+      dockerfile: hub/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - hub-data:/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/sysfleet.db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  agent-1:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile
+    environment:
+      - HUB_URL=ws://hub:8000/ws/agent
+      - AGENT_NAME=agent-1
+      - INTERVAL_MS=1000
+      # Pinned explicitly. The agent's default key derives from the hostname,
+      # which Docker regenerates on every recreate -- so without this, each
+      # `docker compose up` would register a brand-new machine and the fleet
+      # list would fill with duplicates of the same node.
+      - AGENT_KEY=demo-agent-1
+    depends_on:
+      hub:
+        condition: service_healthy
+
+  agent-2:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile
+    environment:
+      - HUB_URL=ws://hub:8000/ws/agent
+      - AGENT_NAME=agent-2
+      - INTERVAL_MS=1000
+      - AGENT_KEY=demo-agent-2
+    depends_on:
+      hub:
+        condition: service_healthy
+
+volumes:
+  hub-data:
