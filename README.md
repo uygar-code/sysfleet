@@ -2,6 +2,8 @@
 
 **Multi-node system monitoring hub** — a centralized FastAPI server that collects real-time metrics from a fleet of lightweight agents and stores them for historical analysis and alerting.
 
+🚀 **Live demo**: https://sysfleet.onrender.com/docs
+
 Born as the natural evolution of [realtime-sysmonitor](https://github.com/...), transitioning from a single-localhost view to a distributed Agent-Hub architecture.
 
 ---
