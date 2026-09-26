@@ -106,6 +106,12 @@ app = FastAPI(
 
 app.include_router(machines_router.router)
 app.include_router(alerts_router.router)
+from fastapi.staticfiles import StaticFiles
+import pathlib
+
+_static = pathlib.Path(__file__).parent / "static"
+if _static.exists():
+    app.mount("/", StaticFiles(directory=_static, html=True), name="static")
 
 
 @app.get("/health", response_model=HealthOut, tags=["system"])
