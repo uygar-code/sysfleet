@@ -8,10 +8,10 @@ WORKDIR /app
 
 # Requirements first, as their own layer: application code changes far more
 # often than dependencies, and this keeps the pip install cached across rebuilds.
-COPY hub/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY hub/ .
+COPY . .
 
 # The database lives on a volume mounted here, not in the image layer.
 ENV DATABASE_URL=sqlite+aiosqlite:////data/sysfleet.db
