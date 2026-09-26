@@ -1,1 +1,157 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SysFleet — Fleet Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --surface: #111820;
+      --border: #1e2a35;
+      --text: #c9d8e8;
+      --muted: #4a6070;
+      --accent: #00d4ff;
+      --green: #00e676;
+      --yellow: #ffb300;
+      --red: #ff4444;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); font-weight: 300; min-height: 100vh; }
+    header { border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg); z-index: 10; }
+    .logo { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--accent); }
+    .logo span { color: var(--muted); font-weight: 400; }
+    .status-bar { display: flex; align-items: center; gap: 20px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; animation: blink 2s ease-in-out infinite; }
+    .pulse.offline { background: var(--red); animation: none; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+    .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 36px; }
+    .summary-card { background: var(--surface); border: 1px solid var(--border); padding: 20px 22px; }
+    .summary-card .val { font-family: var(--mono); font-size: 32px; font-weight: 600; color: var(--text); line-height: 1; margin-bottom: 6px; }
+    .summary-card .val.green { color: var(--green); }
+    .summary-card .val.red { color: var(--red); }
+    .summary-card .val.yellow { color: var(--yellow); }
+    .summary-card .label { font-size: 11px; color: var(--muted); }
+    .section-title { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .machine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+    .machine-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; transition: border-color 0.2s; }
+    .machine-card:hover { border-color: var(--accent); }
+    .machine-card.offline { opacity: 0.5; }
+    .machine-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .machine-name { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--text); }
+    .machine-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .badge { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 2px; }
+    .badge.online { background: rgba(0,230,118,0.12); color: var(--green); }
+    .badge.offline { background: rgba(255,68,68,0.12); color: var(--red); }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .metric { display: flex; flex-direction: column; gap: 6px; }
+    .metric-label { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+    .metric-bar-bg { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .metric-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+    .metric-val { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--text); }
+    .bar-low { background: var(--green); }
+    .bar-mid { background: var(--yellow); }
+    .bar-high { background: var(--red); }
+    .alerts-section { margin-top: 40px; }
+    .alert-item { background: var(--surface); border-left: 3px solid var(--red); padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    .alert-item .alert-name { color: var(--text); }
+    .alert-item .alert-time { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    .empty { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; font-family: var(--mono); }
+    .loading { display: flex; align-items: center; justify-content: center; height: 200px; color: var(--muted); font-family: var(--mono); font-size: 12px; gap: 10px; }
+    .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .refresh-hint { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    .error-banner { background: rgba(255,68,68,0.08); border: 1px solid rgba(255,68,68,0.3); color: var(--red); padding: 12px 20px; font-family: var(--mono); font-size: 12px; margin-bottom: 24px; }
+    @media (max-width: 600px) { .summary-row { grid-template-columns: repeat(2, 1fr); } header { padding: 14px 16px; } main { padding: 20px 14px; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">SysFleet <span>/ fleet monitor</span></div>
+  <div class="status-bar">
+    <span id="conn-indicator"><span class="pulse" id="pulse"></span><span id="conn-text">connecting...</span></span>
+    <span class="refresh-hint" id="last-refresh">—</span>
+  </div>
+</header>
+<main>
+  <div id="error-banner" class="error-banner" style="display:none;"></div>
+  <div class="summary-row">
+    <div class="summary-card"><div class="val" id="s-total">—</div><div class="label">total machines</div></div>
+    <div class="summary-card"><div class="val green" id="s-online">—</div><div class="label">online</div></div>
+    <div class="summary-card"><div class="val red" id="s-offline">—</div><div class="label">offline</div></div>
+    <div class="summary-card"><div class="val yellow" id="s-alerts">—</div><div class="label">active alerts</div></div>
+  </div>
+  <div class="section-title">machines</div>
+  <div class="machine-grid" id="machine-grid">
+    <div class="loading"><div class="spinner"></div> fetching fleet...</div>
+  </div>
+  <div class="alerts-section">
+    <div class="section-title" style="margin-top:24px;">active alerts</div>
+    <div id="alerts-list"><div class="loading"><div class="spinner"></div> fetching alerts...</div></div>
+  </div>
+</main>
+<script>
+  const API = '';
+  const REFRESH = 10000;
+  function barClass(pct) { return pct < 60 ? 'bar-low' : pct < 85 ? 'bar-mid' : 'bar-high'; }
+  function metricBlock(label, value, pct) {
+    return `<div class="metric"><div class="metric-label">${label}</div><div class="metric-val">${value}</div><div class="metric-bar-bg"><div class="metric-bar-fill ${barClass(pct)}" style="width:${Math.min(pct,100)}%"></div></div></div>`;
+  }
+  async function fetchMetrics(id) {
+    try {
+      const r = await fetch(`${API}/machines/${id}/metrics?limit=1&order=desc`);
+      if (!r.ok) return null;
+      const d = await r.json();
+      return d.metrics?.length > 0 ? d.metrics[0] : null;
+    } catch { return null; }
+  }
+  function renderMachine(m, metrics) {
+    const mHtml = metrics
+      ? `<div class="metrics">${metricBlock('CPU', (metrics.cpu_percent??0).toFixed(1)+'%', metrics.cpu_percent||0)}${metricBlock('RAM', (metrics.mem_percent??0).toFixed(1)+'%', metrics.mem_percent||0)}${metricBlock('Disk', (metrics.disk_percent??0).toFixed(1)+'%', metrics.disk_percent||0)}</div>`
+      : `<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">no metrics available</div>`;
+    return `<div class="machine-card ${m.status==='online'?'':'offline'}"><div class="machine-header"><div><div class="machine-name">${m.name||m.agent_key}</div><div class="machine-meta">${m.hostname||''} · ${m.os||''}</div><div class="machine-meta">${m.cpu_cores||'?'} cores · ${m.total_ram_gb?m.total_ram_gb.toFixed(0)+' GB RAM':''}</div></div><span class="badge ${m.status}">${m.status}</span></div>${mHtml}</div>`;
+  }
+  function renderAlerts(alerts) {
+    const list = document.getElementById('alerts-list');
+    if (!alerts?.length) { list.innerHTML = '<div class="empty">no active alerts</div>'; return; }
+    list.innerHTML = alerts.map(a => `<div class="alert-item"><div><div class="alert-name">${a.rule_name||'Alert'} — ${a.machine_name||'machine #'+a.machine_id}</div><div class="alert-time">${a.metric} ${a.operator} ${a.threshold} · started ${new Date(a.started_at).toLocaleTimeString()}</div></div><span class="badge offline">active</span></div>`).join('');
+  }
+  async function refresh() {
+    const banner = document.getElementById('error-banner');
+    try {
+      const [mRes, aRes] = await Promise.all([fetch(`${API}/machines`), fetch(`${API}/alerts?state=active`)]);
+      if (!mRes.ok) throw new Error(`Hub returned ${mRes.status}`);
+      const mData = await mRes.json();
+      const aData = aRes.ok ? await aRes.json() : {alerts:[]};
+      banner.style.display = 'none';
+      document.getElementById('s-total').textContent = mData.total ?? mData.machines?.length ?? 0;
+      document.getElementById('s-online').textContent = mData.online ?? 0;
+      document.getElementById('s-offline').textContent = mData.offline ?? 0;
+      document.getElementById('s-alerts').textContent = aData.alerts?.length ?? 0;
+      document.getElementById('pulse').className = 'pulse';
+      document.getElementById('conn-text').textContent = 'live';
+      const machines = mData.machines || [];
+      const grid = document.getElementById('machine-grid');
+      if (!machines.length) { grid.innerHTML = '<div class="empty">no machines registered — connect an agent to get started</div>'; }
+      else {
+        const metrics = await Promise.all(machines.map(m => m.status==='online' ? fetchMetrics(m.id) : Promise.resolve(null)));
+        grid.innerHTML = machines.map((m,i) => renderMachine(m, metrics[i])).join('');
+      }
+      renderAlerts(aData.alerts || []);
+      document.getElementById('last-refresh').textContent = 'updated ' + new Date().toLocaleTimeString();
+    } catch(e) {
+      banner.style.display = 'block';
+      banner.textContent = '⚠ Could not reach hub — ' + e.message + '. Free instance may be waking up (30s).';
+      document.getElementById('pulse').className = 'pulse offline';
+      document.getElementById('conn-text').textContent = 'disconnected';
+    }
+  }
+  refresh();
+  setInterval(refresh, REFRESH);
+</script>
+</body>
+</html>
